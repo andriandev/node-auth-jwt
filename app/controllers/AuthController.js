@@ -1,7 +1,8 @@
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 import UsersModel from '../models/UsersModel.js';
 import UserRolesModel from '../models/UserRolesModel.js';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import cache from '../helpers/Cache.js';
 
 export const authRegister = async (req, res) => {
   const { username, email, password, conf_password } = req.body;
@@ -73,7 +74,9 @@ export const authLogin = async (req, res) => {
       { expiresIn: expiredToken }
     );
 
-    return res.status(200).json({ status: 200, token: token, expires_in: expiredToken});
+    return res
+      .status(200)
+      .json({ status: 200, token: token, expires_in: expiredToken });
   } catch (e) {
     return res.status(500).json({ status: 500, data: e?.message });
   }
@@ -94,11 +97,17 @@ export const authLogout = async (req, res) => {
   ) {
     // Get token
     const token = req?.headers?.authorization?.split(' ')[1];
-    let blackListToken = req.session.blackListToken ? req.session.blackListToken : req.session.blackListToken = [];
+
+    // Check session black list token
+    let blackListToken = cache.has('blackListToken')
+      ? cache.get('blackListToken')
+      : [];
+
+    // Store each token in array
     blackListToken.push(token);
 
     // Set blacklist token
-    req.session.blackListToken = blackListToken;
+    cache.set('blackListToken', blackListToken);
   }
 
   return res.status(200).json({ status: 200, data: 'Logout succesfully' });
